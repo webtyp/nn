@@ -1,4 +1,5 @@
 # nn
+<img src="docs/img/badges.svg">
 
 The stateless neural-network operations every webtyp model computes (matrix multiplication,
 normalization, activations, softmax, rotary position embeddings), in plain Go for TinyGo/WASM.
@@ -18,4 +19,5 @@ is written once.
 
 ## Documentation
 
+- [SIMD](docs/SIMD.md): what SIMD is, the measured 3.3× speed-up and the three conditions it needs, and how the framework ships a SIMD and a non-SIMD worker.
 - [Agent guide](AGENTS.md): rules for anyone changing this library.

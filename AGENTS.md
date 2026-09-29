@@ -37,9 +37,10 @@ GOOS=js GOARCH=wasm go build ./...
 
 ## Common mistakes to avoid
 
-- Adding a second implementation of a function (SIMD, assembly, build tags). For now there is
-  one plain-Go implementation for every target. Changing that is an open decision of the
-  ecosystem master plan.
+- Adding a second implementation of a function (assembly, intrinsics, build tags). There is one
+  plain-Go implementation. SIMD comes from **how the binary is compiled** (`-opt=2` + the
+  `simd128` target), and it only works on loops that are not floating-point reductions.
+  Read [docs/SIMD.md](docs/SIMD.md) before writing a hot loop.
 - Allocating inside a function. Callers pass `dst`, which keeps the garbage collector quiet
   during inference.
 - Accumulating sums in float32. Norms accumulate in float64 on purpose.
