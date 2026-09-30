@@ -9,6 +9,7 @@ is written once.
 | I want... | Use... |
 |---|---|
 | Matrix multiplication (transposed B) | `nn.MatmulT` |
+| Matrix × vector with int8 weights in blocks of 32 (GGUF Q8_0) | `nn.MatVecInt8Block32` |
 | Layer normalization | `nn.LayerNorm` |
 | RMS normalization | `nn.RMSNorm` |
 | Softmax | `nn.Softmax` |
