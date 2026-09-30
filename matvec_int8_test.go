@@ -47,3 +47,36 @@ func TestMatVecInt8Block32_RejectsShortBuffers(t *testing.T) {
 		t.Fatal("expected an error for zero rows")
 	}
 }
+
+// Multiplying m inputs at once equals m separate matrix-vector products.
+func TestMatmulInt8Block32_EqualsRepeatedMatVec(t *testing.T) {
+	m, rows, cols := 4, 3, 70
+	blocks := 3
+	q := make([]byte, rows*cols)
+	scales := make([]float32, rows*blocks)
+	x := make([]float32, m*cols)
+	for i := range q {
+		q[i] = byte(int8((i*53)%255 - 127))
+	}
+	for i := range scales {
+		scales[i] = 0.02 * float32(i+1)
+	}
+	for i := range x {
+		x[i] = float32(math.Cos(float64(i) * 0.3))
+	}
+	got := make([]float32, m*rows)
+	if err := MatmulInt8Block32(got, x, q, scales, m, rows, cols); err != nil {
+		t.Fatal(err)
+	}
+	want := make([]float32, rows)
+	for i := 0; i < m; i++ {
+		if err := MatVecInt8Block32(want, x[i*cols:(i+1)*cols], q, scales, rows, cols); err != nil {
+			t.Fatal(err)
+		}
+		for r := 0; r < rows; r++ {
+			if got[i*rows+r] != want[r] {
+				t.Errorf("input %d row %d: got %v, want %v", i, r, got[i*rows+r], want[r])
+			}
+		}
+	}
+}

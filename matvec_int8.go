@@ -38,3 +38,38 @@ func MatVecInt8Block32(dst, x []float32, q []byte, scales []float32, rows, cols 
 	}
 	return nil
 }
+
+// MatmulInt8Block32 computes dst[i,r] = Σ_c W[r,c]·x[i,c] for m inputs at once (dst is m×rows,
+// x is m×cols), with W stored as in MatVecInt8Block32. Each row of W is read once for all m
+// inputs, which is what makes reading a prompt in one pass faster than token by token.
+func MatmulInt8Block32(dst, x []float32, q []byte, scales []float32, m, rows, cols int) error {
+	if m <= 0 || rows <= 0 || cols <= 0 {
+		return fmt.Err("nn: invalid matmul dimensions")
+	}
+	blocks := (cols + Int8BlockSize - 1) / Int8BlockSize
+	if len(dst) < m*rows || len(x) < m*cols || len(q) < rows*cols || len(scales) < rows*blocks {
+		return fmt.Err("nn: buffer too short for int8 matmul")
+	}
+	for r := 0; r < rows; r++ {
+		row := q[r*cols : (r+1)*cols]
+		rowScales := scales[r*blocks : (r+1)*blocks]
+		for i := 0; i < m; i++ {
+			xi := x[i*cols : (i+1)*cols]
+			var sum float32
+			for b := 0; b < blocks; b++ {
+				start := b * Int8BlockSize
+				end := start + Int8BlockSize
+				if end > cols {
+					end = cols
+				}
+				var acc float32
+				for c := start; c < end; c++ {
+					acc += float32(int8(row[c])) * xi[c]
+				}
+				sum += acc * rowScales[b]
+			}
+			dst[i*rows+r] = sum
+		}
+	}
+	return nil
+}
