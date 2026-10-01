@@ -22,4 +22,5 @@ is written once.
 ## Documentation
 
 - [SIMD](docs/SIMD.md): what SIMD is, the measured 3.3× speed-up and the three conditions it needs, and how the framework ships a SIMD and a non-SIMD worker.
+- [Performance audit](docs/PERFORMANCE.md): where the time goes, comparison with llama.cpp and browser runtimes, the way out
 - [Agent guide](AGENTS.md): rules for anyone changing this library.
