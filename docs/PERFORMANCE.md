@@ -96,6 +96,32 @@ projection). They are to be confirmed end to end. The Worker picks the highest t
 supports (a feature test, as decision D16 already does for SIMD), and every tier runs the same
 model and gives the same decisions within quantization noise.
 
+## End to end, after the fixes (2026-10-01)
+
+decider-0.8b (int8, `weightsc`) through `qwen` v0.4.0 + `decoder` v0.5.0, compiled with TinyGo
+`-opt=2` and run in Node 22, which uses the same V8 WebAssembly engine as Chrome. The weights are
+read as bytes, as the browser Worker will read them from OPFS. All 7 decisions were right.
+
+| Decision | prompt read | before (native Go, old kernel) | **tier 1: WASM** | **tier 2: WASM + SIMD128** |
+|---|---|---|---|---|
+| pick a tool, first time (fills the cached tool list) | ~200 tokens | 67.6 s | 44.3 s | 21.9 s |
+| pick a tool, tool list cached | ~25 new tokens | 8.1 s | 5.3–6.6 s | **2.6–3.2 s** |
+| injection yes/no | ~45 tokens | 20.9 s | 13 s | 6.5 s |
+| yes/no from data | ~100 tokens | — | 31 s | 14.7 s |
+
+On all 36 benchmark questions, decider-0.8b in our runtime scored **34/36** (route 16/18,
+injection 10/10, facts 8/8), against 32/36 in `llama-server` with 4-bit weights.
+
+SIMD gives 2× end to end, not the kernel's 4.3×: with the matrices four times faster, the scalar
+remainder (DeltaNet's recurrence, norms, the input quantization) is now a visible share. The next
+measured steps:
+
+- **Keep the tool-list prefix across sessions.** The 22–44 s first decision is the same tool list
+  read again every time the Worker starts. Its decoder state (≈19 MB for decider-0.8b) can be saved
+  to OPFS once and loaded in milliseconds.
+- Profile the scalar remainder under WebAssembly, then vectorize the largest piece.
+- Workers in parallel, and WebGPU (below).
+
 ## The way out, in order of cost
 
 1. **SIMD128 in WebAssembly**, with the integer kernel above: **4.3×** on int8 matrices. It needs
