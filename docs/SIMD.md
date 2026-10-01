@@ -86,7 +86,7 @@ Who owns each piece:
 
 ## Next measurements
 
-- The same comparison for int8 weights (dequantize inside the axpy loop). WebAssembly has
-  `i8 → f32` conversions in SIMD.
+- ~~The same comparison for int8 weights.~~ Done (2026-10-01): an int8 × int8 integer dot product
+  vectorizes without the axpy layout, 4.3× (`MatVecQ8Block32`, `docs/PERFORMANCE.md`).
 - Prefill (many tokens at once) in the axpy form, and the encoder's shapes (`m` > 1).
 - Binary size of `-opt=2` versus `-opt=z` for the worker.

@@ -1,0 +1,5 @@
+{
+	"inherits": ["wasm"],
+	"features": "+bulk-memory,+bulk-memory-opt,+call-indirect-overlong,+mutable-globals,+nontrapping-fptoint,+sign-ext,-multivalue,-reference-types,+simd128",
+	"cflags": ["-msimd128"]
+}

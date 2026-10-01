@@ -11,6 +11,7 @@ is written once.
 | Matrix multiplication (transposed B) | `nn.MatmulT` |
 | Matrix × vector with int8 weights in blocks of 32 (GGUF Q8_0) | `nn.MatVecInt8Block32` |
 | The same for many inputs at once (reading a prompt) | `nn.MatmulInt8Block32` |
+| Matrix × vector with int8 weights AND int8 input (vectorizes in WebAssembly, 4.3× with SIMD) | `nn.QuantizeBlocks32` + `nn.MatVecQ8Block32` |
 | Layer normalization | `nn.LayerNorm` |
 | RMS normalization | `nn.RMSNorm` |
 | Softmax | `nn.Softmax` |

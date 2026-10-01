@@ -48,9 +48,57 @@ matters until that kernel is fast.
 Scalar Go has reached its limit. The rest must come from doing several multiply-adds per
 instruction, or on several cores, or on the GPU.
 
+## What we were doing wrong (found 2026-10-01)
+
+Two defects, both measured.
+
+**1. The kernel's form prevented SIMD.** `MatVecInt8Block32` converts each int8 weight to float and
+adds the products into a float sum. A compiler may not reorder float additions (the result would
+change), so LLVM cannot vectorize that loop: with `simd128` enabled it ran exactly as fast as
+without. The fix is the form llama.cpp uses. Quantize the input vector **once per token** to int8
+in blocks of 32 (`nn.QuantizeBlocks32`), then make each block an **integer** dot product scaled by
+the two block scales (`nn.MatVecQ8Block32`). Integer additions can be reordered, so LLVM
+vectorizes them. The error is 0.3 % relative RMS, from quantizing the input.
+
+Measured under TinyGo 0.41 (`-opt=2`, Node 22), one 3584×1024 int8 matrix:
+
+| Kernel | WebAssembly, no SIMD | WebAssembly + SIMD128 | native Go |
+|---|---|---|---|
+| float accumulation (`MatVecInt8Block32`, today) | 2.6–3.0 ms | 2.6 ms (SIMD unused) | 2.0 ms |
+| int8 × int8, one row at a time | 1.5 ms | 0.63 ms | 3.3 ms |
+| **int8 × int8, two rows at a time (`MatVecQ8Block32`)** | **1.30 ms (2.1×)** | **0.61 ms (4.3×)** | — |
+| int8 lookup table instead of conversion | 2.4 ms | 2.4 ms | 2.0 ms |
+| int16 pair products | 1.6 ms | 1.6 ms (breaks vectorization) | — |
+
+It wins even without SIMD, on any browser. Native Go is slower with it (the Go compiler does not
+vectorize), and native Go is only used for tests on the developer machine.
+
+**2. The output projection was computed for every prompt token.** `decoder.Step` always
+multiplies by the full vocabulary (the tied embedding: 248 320 × 1024 for Qwen3.5) and fills the
+logits, even for prompt tokens whose logits are thrown away. That is **34 % of every step** for
+Qwen3.5-0.8B (254 M of ~750 M multiply-adds) and 19 % for LFM2.5-350M. A decision needs only the
+2–10 option letters at the last position, not 248 320 logits. The fix belongs to `decoder`: read a
+token without computing logits, and compute only the rows asked for.
+
+## Tiers: the agent must work on every device
+
+The runtime is built so that every device runs the agent, and better hardware only makes it
+faster:
+
+| Tier | Needs | Kernel | Expected for one decision (~50 new tokens, decider-0.8b) |
+|---|---|---|---|
+| **1. baseline** | any browser with WebAssembly | `MatVecQ8Block32` in a plain `-opt=2` build | ≈ 5–9 s |
+| **2. SIMD** | SIMD128 (Chrome 91+, Firefox 89+, Safari 16.4+) | the same code, `+simd128` build | ≈ 2–4 s |
+| **3. WebGPU** | WebGPU and a usable GPU | compute shaders | under 1 s (WebLLM-class) |
+
+Estimates from the kernel numbers above with defect 2 fixed (prompt tokens without the output
+projection). They are to be confirmed end to end. The Worker picks the highest tier the browser
+supports (a feature test, as decision D16 already does for SIMD), and every tier runs the same
+model and gives the same decisions within quantization noise.
+
 ## The way out, in order of cost
 
-1. **SIMD128 in WebAssembly.** It has been measured at **3.3×** (`docs/SIMD.md`), and it needs
+1. **SIMD128 in WebAssembly**, with the integer kernel above: **4.3×** on int8 matrices. It needs
    TinyGo `-opt=2`, the `simd128` target and loops in axpy form. That would put us around llama.cpp
    on one thread (~6 tok/s). Every browser has SIMD128 today. The Worker build ships both a SIMD
    and a plain binary (decision D16).
