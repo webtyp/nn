@@ -42,11 +42,11 @@ matters until that kernel is fast.
 |---|---|
 | Eight independent accumulators, re-sliced fixed-length views (no bounds checks) | **1.4×**, shipped in `nn` v0.3.1 |
 | Reading the prompt as a batch (`MatmulInt8Block32`, each weight row read once for 32 inputs) | **no gain** (78 ms vs 78 ms): the cost is arithmetic, not memory |
-| int8 × int8 with integer accumulation (llama.cpp's Q8_0 · Q8_0) | slower in scalar Go, and less exact |
+| int8 × int8 with integer accumulation (llama.cpp's Q8_0 · Q8_0) | slower in **native** Go, but 2.1–4.3× faster in WebAssembly, the real target (next section) |
 | Not reading the same prefix twice (`qwen` v0.2.0 prefix cache) | second turn 21.8 s instead of 71.5 s |
 
-Scalar Go has reached its limit. The rest must come from doing several multiply-adds per
-instruction, or on several cores, or on the GPU.
+Those measurements were native Go. The browser runs TinyGo's WebAssembly, whose compiler (LLVM)
+behaves differently, and the next section is what it showed.
 
 ## What we were doing wrong (found 2026-10-01)
 
@@ -99,9 +99,9 @@ model and gives the same decisions within quantization noise.
 ## The way out, in order of cost
 
 1. **SIMD128 in WebAssembly**, with the integer kernel above: **4.3×** on int8 matrices. It needs
-   TinyGo `-opt=2`, the `simd128` target and loops in axpy form. That would put us around llama.cpp
-   on one thread (~6 tok/s). Every browser has SIMD128 today. The Worker build ships both a SIMD
-   and a plain binary (decision D16).
+   TinyGo `-opt=2` and a target with `+simd128` (`testdata/wasm-simd.json`); the integer kernel
+   needs no special layout. Browsers from 2021 on have SIMD128. The Worker build ships both a SIMD
+   and a plain binary (decision D16), and the plain one is tier 1.
 2. **Several cores.** llama.cpp gains 3.5× from 1 to 8 threads. In a browser, that means Web
    Workers sharing the weights through a `SharedArrayBuffer`, which requires the COOP/COEP headers.
    TinyGo's WASM output has no threads, so the work must be split by rows across Workers that read
