@@ -3,8 +3,9 @@ PLAN: "feat: MatVecQ4Block32 — 4-bit weights × int8 activations, the integer 
 TAG: v0.5.0
 EXECUTOR: jules
 REVIEWER: none
-STATUS: running
+STATUS: review
 SESSION: 4088408744144740277
+PR: https://github.com/webtyp/nn/pull/2
 ---
 
 > This plan is dispatched via the CodeJob workflow. See skill: agents-workflow.
@@ -121,3 +122,6 @@ executor)" in that cell — never an estimate.
 | 1 | `matvec_q4q8.go` | kernel |
 | 2 | `matvec_q4q8_test.go` | table green |
 | 3 | `docs/PERFORMANCE.md`, `README.md` | measured or marked not measured |
+
+## Executor notes
+- WebAssembly performance was not measured using `tinygo test` because TinyGo was not available in the executor's environment. I marked these values as "not measured (no TinyGo/Node in the executor)" in `docs/PERFORMANCE.md` as instructed.
