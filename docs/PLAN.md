@@ -3,6 +3,8 @@ PLAN: "feat: MatVecQ4Block32 — 4-bit weights × int8 activations, the integer 
 TAG: v0.5.0
 EXECUTOR: jules
 REVIEWER: none
+STATUS: running
+SESSION: 4088408744144740277
 ---
 
 > This plan is dispatched via the CodeJob workflow. See skill: agents-workflow.
