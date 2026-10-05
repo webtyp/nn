@@ -121,3 +121,6 @@ executor)" in that cell — never an estimate.
 | 1 | `matvec_q4q8.go` | kernel |
 | 2 | `matvec_q4q8_test.go` | table green |
 | 3 | `docs/PERFORMANCE.md`, `README.md` | measured or marked not measured |
+
+## Executor notes
+- WebAssembly performance was not measured using `tinygo test` because TinyGo was not available in the executor's environment. I marked these values as "not measured (no TinyGo/Node in the executor)" in `docs/PERFORMANCE.md` as instructed.

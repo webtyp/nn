@@ -73,6 +73,14 @@ Measured under TinyGo 0.41 (`-opt=2`, Node 22), one 3584×1024 int8 matrix:
 It wins even without SIMD, on any browser. Native Go is slower with it (the Go compiler does not
 vectorize), and native Go is only used for tests on the developer machine.
 
+### 4-bit weights (`MatVecQ4Block32`)
+
+Measured one 3584×1024 matrix (Q4_0 layout, 4-bit weights × int8 activations):
+
+| Kernel | WebAssembly, no SIMD | WebAssembly + SIMD128 | native Go |
+|---|---|---|---|
+| `MatVecQ4Block32` | not measured (no TinyGo/Node in the executor) | not measured (no TinyGo/Node in the executor) | 4.48 ms |
+
 **2. The output projection was computed for every prompt token.** `decoder.Step` always
 multiplies by the full vocabulary (the tied embedding: 248 320 × 1024 for Qwen3.5) and fills the
 logits, even for prompt tokens whose logits are thrown away. That is **34 % of every step** for
