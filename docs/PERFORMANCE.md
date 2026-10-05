@@ -75,11 +75,16 @@ vectorize), and native Go is only used for tests on the developer machine.
 
 ### 4-bit weights (`MatVecQ4Block32`)
 
-Measured one 3584×1024 matrix (Q4_0 layout, 4-bit weights × int8 activations):
+Same 3584×1024 matrix, Q4_0 layout (4-bit weights × int8 activations), measured on 2026-10-05 in
+one run next to the int8 kernel (TinyGo 0.41, `-opt=2`, Node 22). The machine was loaded, so the
+absolute times are higher than the table above; the ratio between the two kernels is the result:
 
 | Kernel | WebAssembly, no SIMD | WebAssembly + SIMD128 | native Go |
 |---|---|---|---|
-| `MatVecQ4Block32` | not measured (no TinyGo/Node in the executor) | not measured (no TinyGo/Node in the executor) | 4.48 ms |
+| `MatVecQ8Block32` (same run) | 4.60 ms | 2.09 ms | — |
+| `MatVecQ4Block32` | 5.12 ms (1.11×) | 2.32 ms (1.11×) | 4.48 ms |
+
+Unpacking the nibbles costs about 11 % per matrix; the weights take half the memory.
 
 **2. The output projection was computed for every prompt token.** `decoder.Step` always
 multiplies by the full vocabulary (the tied embedding: 248 320 × 1024 for Qwen3.5) and fills the
